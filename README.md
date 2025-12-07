@@ -55,10 +55,8 @@ After setup, the integration creates a sensor showing the next planned outage ti
   series:
     - entity: sensor.power_roulette_outage_schedule
       name: Відключення
-      type: area
+      type: range
       color: '#ef4444'
-      extend_to: false
-      stroke_width: 0
       data_generator: |
         const sched = entity?.attributes?.schedule;
         if (!Array.isArray(sched)) return [];

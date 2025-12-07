@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime
 from typing import Any
 
 from aiohttp import ClientSession
-from homeassistant.util import dt as dt_util
 
 from .const import SUPPORTED_CITIES
 
 BASE_URL = "https://be-svitlo.oe.if.ua"
 QUEUES_ENDPOINT = "/gpv-queue-list"
+SCHEDULE_ENDPOINT = "/schedule-by-queue"
 
 
 class PowerRouletteApiClient:
@@ -33,12 +33,40 @@ class PowerRouletteApiClient:
     return [item["code"] for item in payload]
 
   async def async_get_schedule(self, city: str, queue: str | int) -> dict[str, Any]:
-    """Return placeholder schedule data for the requested city/queue."""
-    # Replace this with a real HTTP call to the blackout schedule service.
-    next_outage = dt_util.utcnow() + timedelta(hours=2)
+    """Fetch blackout schedule for the given queue."""
+    params = {"queue": str(queue)}
+    async with self._session.get(f"{BASE_URL}{SCHEDULE_ENDPOINT}", params=params) as resp:
+      resp.raise_for_status()
+      payload = await resp.json()
+
+    # Normalize structure: list of days with intervals for this queue
+    normalized: list[dict[str, Any]] = []
+    for item in payload:
+      event_date = item.get("eventDate")
+      queues = item.get("queues", {})
+      intervals_raw = queues.get(str(queue), [])
+      intervals = []
+      for interval in intervals_raw:
+        intervals.append(
+            {
+                "from": interval.get("from"),
+                "to": interval.get("to"),
+                "status": interval.get("status"),
+                "shutdownHours": interval.get("shutdownHours"),
+            }
+        )
+      normalized.append(
+          {
+              "event_date": event_date,
+              "intervals": intervals,
+              "created_at": item.get("createdAt"),
+              "approved_at": item.get("scheduleApprovedSince"),
+          }
+      )
+
     return {
         "city": city,
         "queue": str(queue),
-        "next_outage": next_outage.isoformat(),
-        "retrieved_at": dt_util.utcnow().isoformat(),
+        "schedule": normalized,
+        "retrieved_at": datetime.utcnow().isoformat(),
     }

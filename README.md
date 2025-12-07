@@ -19,3 +19,24 @@ Power Roulette is a Home Assistant custom integration that tracks Ukraine's roll
 3. Enter your city and queue number/label, then submit.
 
 After setup, the integration creates a sensor showing the next planned outage time. Data refreshes automatically every 5 minutes via the remote schedule service. This skeleton uses a placeholder API client; swap in a real endpoint to power your production integration.
+
+### Optional: Graph your outages
+- The sensor `sensor.power_roulette_outage_schedule` exposes full interval data in attributes (`schedule`, `next_outage`, `next_restore`).
+- Pair it with a Lovelace chart (e.g., `apexcharts-card`) to visualize blackout windows. Example:
+  ```yaml
+  type: custom:apexcharts-card
+  stacked: true
+  header:
+    title: Power Roulette (today/tomorrow)
+  series:
+    - entity: sensor.power_roulette_outage_schedule
+      name: Outage
+      type: range
+      data_generator: |
+        const sched = entity.attributes.schedule || [];
+        return sched.flatMap(day => (day.intervals || []).map(slot => {
+          // Merge date + time into ISO strings
+          const date = day.event_date?.split('.').reverse().join('-');
+          return [new Date(`${date}T${slot.from}:00`), new Date(`${date}T${slot.to}:00`)];
+        }));
+  ```

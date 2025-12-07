@@ -19,7 +19,12 @@ from .coordinator import PowerRouletteCoordinator
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
   """Set up sensors from a config entry."""
   coordinator: PowerRouletteCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
-  async_add_entities([NextOutageSensor(coordinator, entry)])
+  async_add_entities(
+      [
+          NextOutageSensor(coordinator, entry),
+          ScheduleSensor(coordinator, entry),
+      ]
+  )
 
 
 class NextOutageSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEntity):
@@ -58,4 +63,42 @@ class NextOutageSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEntity
         "city": data.get("city"),
         "queue": data.get("queue"),
         "retrieved_at": data.get("retrieved_at"),
+    }
+
+
+class ScheduleSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEntity):
+  """Sensor exposing the full outage schedule for charts."""
+
+  _attr_has_entity_name = True
+  _attr_name = "Outage schedule"
+
+  def __init__(self, coordinator: PowerRouletteCoordinator, entry: ConfigEntry) -> None:
+    """Initialize the schedule sensor."""
+    super().__init__(coordinator)
+    self._entry = entry
+    self._attr_unique_id = f"{entry.entry_id}_schedule"
+    self._attr_device_info = DeviceInfo(
+        identifiers={(DOMAIN, entry.entry_id)},
+        name="Power Roulette",
+        manufacturer="Power Roulette",
+        entry_type=None,
+    )
+
+  @property
+  def native_value(self) -> str:
+    """Return a simple status string."""
+    status = (self.coordinator.data or {}).get("current_status", "unknown")
+    return status
+
+  @property
+  def extra_state_attributes(self) -> dict[str, Any]:
+    """Expose schedule for today and tomorrow to be graphed in Lovelace."""
+    data = self.coordinator.data or {}
+    schedule = data.get("schedule") or []
+    return {
+        "city": data.get("city"),
+        "queue": data.get("queue"),
+        "schedule": schedule,
+        "next_outage": data.get("next_outage"),
+        "next_restore": data.get("next_restore"),
     }

@@ -7,6 +7,7 @@ import logging
 from typing import Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import PowerRouletteApiClient
@@ -34,6 +35,44 @@ class PowerRouletteCoordinator(DataUpdateCoordinator[dict[str, Any]]):
   async def _async_update_data(self) -> dict[str, Any]:
     """Fetch data from the API."""
     try:
-      return await self.client.async_get_schedule(self.city, self.queue)
+      data = await self.client.async_get_schedule(self.city, self.queue)
+      now = dt_util.utcnow()
+
+      # Find the next outage interval across today/tomorrow
+      next_outage_iso: str | None = None
+      next_restore_iso: str | None = None
+      current_status = "on"
+
+      for day in data.get("schedule", []):
+        date_str = day.get("event_date")
+        if not date_str:
+          continue
+        # date format dd.MM.yyyy
+        try:
+          day_date = dt_util.parse_datetime(date_str)
+        except Exception:  # noqa: BLE001
+          continue
+
+        for interval in day.get("intervals", []):
+          start_raw = interval.get("from")
+          end_raw = interval.get("to")
+          if not start_raw or not end_raw:
+            continue
+          start_dt = dt_util.parse_datetime(f"{date_str} {start_raw}")
+          end_dt = dt_util.parse_datetime(f"{date_str} {end_raw}")
+          if not start_dt or not end_dt:
+            continue
+
+          if start_dt > now and (next_outage_iso is None or start_dt.isoformat() < next_outage_iso):
+            next_outage_iso = start_dt.isoformat()
+            next_restore_iso = end_dt.isoformat()
+
+          if start_dt <= now <= end_dt:
+            current_status = "off"
+
+      data["next_outage"] = next_outage_iso
+      data["next_restore"] = next_restore_iso
+      data["current_status"] = current_status
+      return data
     except Exception as err:  # noqa: BLE001 - broad to surface unexpected API issues
       raise UpdateFailed(f"Error communicating with Power Roulette API: {err}") from err

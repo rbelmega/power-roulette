@@ -17,8 +17,14 @@ Power Roulette is a Home Assistant custom integration that tracks Ukraine's roll
 1. Go to **Settings → Devices & Services → Add Integration**.
 2. Search for **Power Roulette**.
 3. Enter your city and queue number/label, then submit.
+4. To change city/queue later: **Settings → Devices & Services → Power Roulette → Configure**.
 
-After setup, the integration creates a sensor showing the next planned outage time. Data refreshes automatically every 5 minutes via the remote schedule service. This skeleton uses a placeholder API client; swap in a real endpoint to power your production integration.
+After setup, the integration creates:
+- `sensor.power_roulette_next_outage` — next planned outage (timestamp).
+- `sensor.power_roulette_next_power_restore` — when power should return (timestamp, lightning icon).
+- `sensor.power_roulette_outage_schedule` — status plus full schedule attributes for charts.
+
+Data refreshes automatically every 5 minutes via the remote schedule service. This skeleton uses a placeholder API client; swap in a real endpoint to power your production integration.
 
 ### Optional: Graph your outages (timeline)
 - The sensor `sensor.power_roulette_outage_schedule` exposes full interval data in attributes (`schedule`, `next_outage`, `next_restore`).

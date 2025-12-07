@@ -37,25 +37,23 @@ class PowerRouletteCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     try:
       data = await self.client.async_get_schedule(self.city, self.queue)
       now = dt_util.utcnow()
+      tz = dt_util.get_time_zone(self.hass.config.time_zone)
 
-      # Find the next outage interval across today/tomorrow
-      next_outage_iso: str | None = None
-      next_restore_iso: str | None = None
-      current_status = "on"
+      def _combine(date_val: str, time_val: str) -> datetime | None:
+        """Combine date and time (local tz) into UTC-aware datetime."""
+        try:
+          local_naive = datetime.strptime(f"{date_val} {time_val}", "%d.%m.%Y %H:%M")
+        except ValueError:
+          return None
+        local_dt = local_naive.replace(tzinfo=tz)
+        return dt_util.as_utc(local_dt)
+
+      intervals_all: list[tuple[datetime, datetime]] = []
 
       for day in data.get("schedule", []):
         date_str = day.get("event_date")
         if not date_str:
           continue
-
-        def _combine(date_val: str, time_val: str) -> datetime | None:
-          """Combine date and time (local tz) into UTC-aware datetime."""
-          try:
-            local_naive = datetime.strptime(f"{date_val} {time_val}", "%d.%m.%Y %H:%M")
-          except ValueError:
-            return None
-          # Assume schedule times are in HA local timezone
-          return dt_util.as_utc(dt_util.as_local(local_naive))
 
         for interval in day.get("intervals", []):
           start_raw = interval.get("from")
@@ -73,13 +71,21 @@ class PowerRouletteCoordinator(DataUpdateCoordinator[dict[str, Any]]):
           # Persist normalized datetimes for UI cards
           interval["start_iso"] = start_dt.isoformat()
           interval["end_iso"] = end_dt.isoformat()
+          intervals_all.append((start_dt, end_dt))
 
-          if start_dt > now and (next_outage_iso is None or start_dt.isoformat() < next_outage_iso):
-            next_outage_iso = start_dt.isoformat()
-            next_restore_iso = end_dt.isoformat()
+      intervals_all.sort(key=lambda pair: pair[0])
 
-          if start_dt <= now <= end_dt:
+      next_outage_iso: str | None = None
+      next_restore_iso: str | None = None
+      current_status = "on"
+
+      for start_dt, end_dt in intervals_all:
+        if now < end_dt:
+          next_outage_iso = start_dt.isoformat()
+          next_restore_iso = end_dt.isoformat()
+          if start_dt <= now:
             current_status = "off"
+          break
 
       data["next_outage"] = next_outage_iso
       data["next_restore"] = next_restore_iso

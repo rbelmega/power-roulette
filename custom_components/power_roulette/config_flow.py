@@ -34,8 +34,16 @@ class PowerRouletteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
       self._city = user_input["city"]
       return await self.async_step_queue()
 
-    cities = await self._client.async_get_cities()
-    data_schema = vol.Schema({vol.Required("city"): vol.In(cities)})
+    try:
+      cities = await self._client.async_get_cities()
+    except Exception:  # noqa: BLE001 - surface in UI without 500
+      errors["base"] = "cannot_connect"
+      cities = []
+
+    if cities:
+      data_schema = vol.Schema({vol.Required("city"): vol.In(cities)})
+    else:
+      data_schema = vol.Schema({vol.Required("city"): str})
     return self.async_show_form(step_id="user", data_schema=data_schema, errors=errors)
 
   async def async_step_queue(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
@@ -50,8 +58,16 @@ class PowerRouletteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
       self._abort_if_unique_id_configured()
       return self.async_create_entry(title=f"{self._city} ({queue})", data={"city": self._city, "queue": queue})
 
-    queues = await self._client.async_get_queues(self._city)
-    data_schema = vol.Schema({vol.Required("queue"): vol.In(queues)})
+    try:
+      queues = await self._client.async_get_queues(self._city)
+    except Exception:  # noqa: BLE001
+      errors["base"] = "cannot_connect"
+      queues = []
+
+    if queues:
+      data_schema = vol.Schema({vol.Required("queue"): vol.In(queues)})
+    else:
+      data_schema = vol.Schema({vol.Required("queue"): str})
     return self.async_show_form(
         step_id="queue",
         data_schema=data_schema,
@@ -87,8 +103,17 @@ class PowerRouletteOptionsFlow(config_entries.OptionsFlow):
       return await self.async_step_queue()
 
     current_city = self.config_entry.options.get("city") or self.config_entry.data.get("city")
-    cities = await self._client.async_get_cities()
-    data_schema = vol.Schema({vol.Required("city", default=current_city): vol.In(cities)})
+    try:
+      cities = await self._client.async_get_cities()
+    except Exception:  # noqa: BLE001
+      errors["base"] = "cannot_connect"
+      cities = []
+
+    if cities:
+      default_city = current_city if current_city in cities else cities[0]
+      data_schema = vol.Schema({vol.Required("city", default=default_city): vol.In(cities)})
+    else:
+      data_schema = vol.Schema({vol.Required("city", default=current_city): str})
     return self.async_show_form(step_id="init", data_schema=data_schema, errors=errors)
 
   async def async_step_queue(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
@@ -101,8 +126,17 @@ class PowerRouletteOptionsFlow(config_entries.OptionsFlow):
       return self.async_create_entry(title="", data={"city": self._city, "queue": queue})
 
     current_queue = self.config_entry.options.get("queue") or self.config_entry.data.get("queue")
-    queues = await self._client.async_get_queues(self._city)
-    data_schema = vol.Schema({vol.Required("queue", default=current_queue): vol.In(queues)})
+    try:
+      queues = await self._client.async_get_queues(self._city)
+    except Exception:  # noqa: BLE001
+      errors["base"] = "cannot_connect"
+      queues = []
+
+    if queues:
+      default_queue = current_queue if current_queue in queues else queues[0]
+      data_schema = vol.Schema({vol.Required("queue", default=default_queue): vol.In(queues)})
+    else:
+      data_schema = vol.Schema({vol.Required("queue", default=current_queue): str})
     return self.async_show_form(
         step_id="queue",
         data_schema=data_schema,

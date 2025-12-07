@@ -62,16 +62,49 @@ class PowerRouletteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
   @callback
   def async_get_options_flow(self) -> config_entries.OptionsFlow:
     """Return the options flow handler."""
-    return PowerRouletteOptionsFlow(self)
+    return PowerRouletteOptionsFlow
 
 
 class PowerRouletteOptionsFlow(config_entries.OptionsFlow):
   """Handle options for Power Roulette."""
 
-  def __init__(self, config_flow: PowerRouletteConfigFlow) -> None:
+  def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
     """Initialize options flow."""
-    self.config_flow = config_flow
+    self.config_entry = config_entry
+    self._city: str | None = None
+    self._client: PowerRouletteApiClient | None = None
 
   async def async_step_init(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
-    """Manage the options."""
-    return self.async_create_entry(title="", data={})
+    """First step of the options flow: pick a city."""
+    if self._client is None:
+      session = async_get_clientsession(self.hass)
+      self._client = PowerRouletteApiClient(session)
+
+    errors: dict[str, str] = {}
+    if user_input is not None:
+      self._city = user_input["city"]
+      return await self.async_step_queue()
+
+    current_city = self.config_entry.options.get("city") or self.config_entry.data.get("city")
+    cities = await self._client.async_get_cities()
+    data_schema = vol.Schema({vol.Required("city", default=current_city): vol.In(cities)})
+    return self.async_show_form(step_id="init", data_schema=data_schema, errors=errors)
+
+  async def async_step_queue(self, user_input: dict[str, Any] | None = None) -> config_entries.ConfigFlowResult:
+    """Second step: pick a queue for the chosen city."""
+    assert self._city  # ensured in previous step
+    errors: dict[str, str] = {}
+
+    if user_input is not None:
+      queue = user_input["queue"]
+      return self.async_create_entry(title="", data={"city": self._city, "queue": queue})
+
+    current_queue = self.config_entry.options.get("queue") or self.config_entry.data.get("queue")
+    queues = await self._client.async_get_queues(self._city)
+    data_schema = vol.Schema({vol.Required("queue", default=current_queue): vol.In(queues)})
+    return self.async_show_form(
+        step_id="queue",
+        data_schema=data_schema,
+        errors=errors,
+        description_placeholders={"city": self._city},
+    )

@@ -27,7 +27,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
   session = async_get_clientsession(hass)
   client = PowerRouletteApiClient(session)
-  coordinator = PowerRouletteCoordinator(hass, client, entry.data["city"], entry.data["queue"])
+  city = entry.options.get("city", entry.data["city"])
+  queue = entry.options.get("queue", entry.data["queue"])
+
+  coordinator = PowerRouletteCoordinator(hass, client, city, queue)
 
   await coordinator.async_config_entry_first_refresh()
 

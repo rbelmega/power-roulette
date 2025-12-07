@@ -59,10 +59,11 @@ class PowerRouletteConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         description_placeholders={"city": self._city},
     )
 
+  @staticmethod
   @callback
-  def async_get_options_flow(self) -> config_entries.OptionsFlow:
+  def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
     """Return the options flow handler."""
-    return PowerRouletteOptionsFlow
+    return PowerRouletteOptionsFlow(config_entry)
 
 
 class PowerRouletteOptionsFlow(config_entries.OptionsFlow):

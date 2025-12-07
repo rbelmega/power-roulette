@@ -20,47 +20,58 @@ Power Roulette is a Home Assistant custom integration that tracks Ukraine's roll
 
 After setup, the integration creates a sensor showing the next planned outage time. Data refreshes automatically every 5 minutes via the remote schedule service. This skeleton uses a placeholder API client; swap in a real endpoint to power your production integration.
 
-### Optional: Graph your outages
+### Optional: Graph your outages (timeline)
 - The sensor `sensor.power_roulette_outage_schedule` exposes full interval data in attributes (`schedule`, `next_outage`, `next_restore`).
-- Pair it with a Lovelace chart (e.g., `apexcharts-card`) to visualize blackout windows. Example (uses only built-in series types):
+- Use `apexcharts-card` (HACS → Frontend) for a distributed range/timeline view. Example:
   ```yaml
   type: custom:apexcharts-card
-  graph_span: 48h
   header:
-    title: Power Roulette (today/tomorrow)
+    title: Power Roulette — графік відключень
+    show: true
+  graph_span: 48h
+  apex_config:
+    chart:
+      type: rangeBar
+    plotOptions:
+      bar:
+        horizontal: true
+        distributed: true
+        rangeBarGroupRows: true
+    dataLabels:
+      enabled: true
+      formatter: |
+        function(val) {
+          if (!val) return '';
+          const [start, end] = val;
+          const s = new Date(start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+          const e = new Date(end).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+          return `${s}–${e}`;
+        }
+    xaxis:
+      type: datetime
+    yaxis:
+      labels:
+        show: true
   series:
     - entity: sensor.power_roulette_outage_schedule
-      name: Outage
+      name: Відключення
       type: area
-      color: '#e53935'
+      color: '#ef4444'
       extend_to: false
       stroke_width: 0
       data_generator: |
         const sched = entity.attributes.schedule || [];
-        const points = [];
+        const bars = [];
         sched.forEach(day => {
-          const date = day.event_date?.split('.').reverse().join('-'); // dd.MM.yyyy -> yyyy-MM-dd
-          (day.intervals || []).forEach(slot => {
-            const start = new Date(`${date}T${slot.from}:00`);
-            const end = new Date(`${date}T${slot.to}:00`);
-            points.push([start, 1]);
-            points.push([end, 1]);
-            points.push([end, 0]);
+          const date = day.event_date?.split('.').reverse().join('-');
+          (day.intervals || []).forEach((slot, idx) => {
+            const start = new Date(`${date}T${slot.from}:00`).getTime();
+            const end = new Date(`${date}T${slot.to}:00`).getTime();
+            bars.push({ x: `${day.event_date} #${idx+1}`, y: [start, end] });
           });
         });
-        points.sort((a, b) => new Date(a[0]) - new Date(b[0]));
-        return points;
-  apex_config:
-    chart:
-      type: area
-    stroke:
-      curve: stepline
-    yaxis:
-      min: 0
-      max: 1
-      labels:
-        show: false
+        return bars;
   ```
 
 Click to prefill a Lovelace card with this YAML:
-[![Add outage chart](https://my.home-assistant.io/badges/redirect.svg)](https://my.home-assistant.io/redirect/lovelace_yamleditor/?yaml=type%3A%20custom%3Aapexcharts-card%0Agraph_span%3A%2048h%0Aheader%3A%0A%20%20title%3A%20Power%20Roulette%20%28today%2Ftomorrow%29%0Aseries%3A%0A%20%20-%20entity%3A%20sensor.power_roulette_outage_schedule%0A%20%20%20%20name%3A%20Outage%0A%20%20%20%20type%3A%20area%0A%20%20%20%20color%3A%20%27%23e53935%27%0A%20%20%20%20extend_to%3A%20false%0A%20%20%20%20stroke_width%3A%200%0A%20%20%20%20data_generator%3A%20%7C%0A%20%20%20%20%20%20const%20sched%20%3D%20entity.attributes.schedule%20%7C%7C%20%5B%5D%3B%0A%20%20%20%20%20%20const%20points%20%3D%20%5B%5D%3B%0A%20%20%20%20%20%20sched.forEach%28day%20%3D%3E%20%7B%0A%20%20%20%20%20%20%20%20const%20date%20%3D%20day.event_date%3F.split%28%27.%27%29.reverse%28%29.join%28%27-%27%29%3B%0A%20%20%20%20%20%20%20%20%28day.intervals%20%7C%7C%20%5B%5D%29.forEach%28slot%20%3D%3E%20%7B%0A%20%20%20%20%20%20%20%20%20%20const%20start%20%3D%20new%20Date%28%60%24%7Bdate%7DT%24%7Bslot.from%7D%3A00%60%29%3B%0A%20%20%20%20%20%20%20%20%20%20const%20end%20%3D%20new%20Date%28%60%24%7Bdate%7DT%24%7Bslot.to%7D%3A00%60%29%3B%0A%20%20%20%20%20%20%20%20%20%20points.push%28%5Bstart%2C%201%5D%29%3B%0A%20%20%20%20%20%20%20%20%20%20points.push%28%5Bend%2C%201%5D%29%3B%0A%20%20%20%20%20%20%20%20%20%20points.push%28%5Bend%2C%200%5D%29%3B%0A%20%20%20%20%20%20%20%20%7D%29%3B%0A%20%20%20%20%20%20%7D%29%3B%0A%20%20%20%20%20%20points.sort%28%28a%2C%20b%29%20%3D%3E%20new%20Date%28a%5B0%5D%29%20-%20new%20Date%28b%5B0%5D%29%29%3B%0A%20%20%20%20%20%20return%20points%3B%0Aapex_config%3A%0A%20%20chart%3A%0A%20%20%20%20type%3A%20area%0A%20%20stroke%3A%0A%20%20%20%20curve%3A%20stepline%0A%20%20yaxis%3A%0A%20%20%20%20min%3A%200%0A%20%20%20%20max%3A%201%0A%20%20%20%20labels%3A%0A%20%20%20%20%20%20show%3A%20false)
+[![Add outage timeline](https://my.home-assistant.io/badges/redirect.svg)](https://my.home-assistant.io/redirect/lovelace_yamleditor/?yaml=type%3A%20custom%3Aapexcharts-card%0Aheader%3A%0A%20%20title%3A%20Power%20Roulette%20%E2%80%94%20%D0%B3%D1%80%D0%B0%D1%84%D1%96%D0%BA%20%D0%B2%D1%96%D0%B4%D0%BA%D0%BB%D1%8E%D1%87%D0%B5%D0%BD%D1%8C%0A%20%20show%3A%20true%0Agraph_span%3A%2048h%0Aapex_config%3A%0A%20%20chart%3A%0A%20%20%20%20type%3A%20rangeBar%0A%20%20plotOptions%3A%0A%20%20%20%20bar%3A%0A%20%20%20%20%20%20horizontal%3A%20true%0A%20%20%20%20%20%20distributed%3A%20true%0A%20%20%20%20%20%20rangeBarGroupRows%3A%20true%0A%20%20dataLabels%3A%0A%20%20%20%20enabled%3A%20true%0A%20%20%20%20formatter%3A%20%7C%0A%20%20%20%20%20%20function%28val%29%20%7B%0A%20%20%20%20%20%20%20%20if%20%28%21val%29%20return%20%27%27%3B%0A%20%20%20%20%20%20%20%20const%20%5Bstart%2C%20end%5D%20%3D%20val%3B%0A%20%20%20%20%20%20%20%20const%20s%20%3D%20new%20Date%28start%29.toLocaleTimeString%28%5B%5D%2C%20%7Bhour%3A%272-digit%27%2C%20minute%3A%272-digit%27%7D%29%3B%0A%20%20%20%20%20%20%20%20const%20e%20%3D%20new%20Date%28end%29.toLocaleTimeString%28%5B%5D%2C%20%7Bhour%3A%272-digit%27%2C%20minute%3A%272-digit%27%7D%29%3B%0A%20%20%20%20%20%20%20%20return%20%60%24%7Bs%7D%E2%80%93%24%7Be%7D%60%3B%0A%20%20%20%20%20%20%7D%0A%20%20xaxis%3A%0A%20%20%20%20type%3A%20datetime%0A%20%20yaxis%3A%0A%20%20%20%20labels%3A%0A%20%20%20%20%20%20show%3A%20true%0Aseries%3A%0A%20%20-%20entity%3A%20sensor.power_roulette_outage_schedule%0A%20%20%20%20name%3A%20%D0%92%D1%96%D0%B4%D0%BA%D0%BB%D1%8E%D1%87%D0%B5%D0%BD%D0%BD%D1%8F%0A%20%20%20%20type%3A%20area%0A%20%20%20%20color%3A%20%27%23ef4444%27%0A%20%20%20%20extend_to%3A%20false%0A%20%20%20%20stroke_width%3A%200%0A%20%20%20%20data_generator%3A%20%7C%0A%20%20%20%20%20%20const%20sched%20%3D%20entity.attributes.schedule%20%7C%7C%20%5B%5D%3B%0A%20%20%20%20%20%20const%20bars%20%3D%20%5B%5D%3B%0A%20%20%20%20%20%20sched.forEach%28day%20%3D%3E%20%7B%0A%20%20%20%20%20%20%20%20const%20date%20%3D%20day.event_date%3F.split%28%27.%27%29.reverse%28%29.join%28%27-%27%29%3B%0A%20%20%20%20%20%20%20%20%28day.intervals%20%7C%7C%20%5B%5D%29.forEach%28%28slot%2C%20idx%29%20%3D%3E%20%7B%0A%20%20%20%20%20%20%20%20%20%20const%20start%20%3D%20new%20Date%28%60%24%7Bdate%7DT%24%7Bslot.from%7D%3A00%60%29.getTime%28%29%3B%0A%20%20%20%20%20%20%20%20%20%20const%20end%20%3D%20new%20Date%28%60%24%7Bdate%7DT%24%7Bslot.to%7D%3A00%60%29.getTime%28%29%3B%0A%20%20%20%20%20%20%20%20%20%20bars.push%28%7Bx%3A%20%60%24%7Bday.event_date%7D%20%23%24%7Bidx%2B1%7D%60%2C%20y%3A%20%5Bstart%2C%20end%5D%7D%29%3B%0A%20%20%20%20%20%20%20%20%7D%29%3B%0A%20%20%20%20%20%20%7D%29%3B%0A%20%20%20%20%20%20return%20bars%3B%0A)

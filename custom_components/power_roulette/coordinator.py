@@ -82,22 +82,24 @@ class PowerRouletteCoordinator(DataUpdateCoordinator[dict[str, Any]]):
       current_interval: tuple[datetime, datetime] | None = None
       next_interval: tuple[datetime, datetime] | None = None
 
-      for start_dt, end_dt in intervals_all:
+      for idx, (start_dt, end_dt) in enumerate(intervals_all):
         if start_dt <= now <= end_dt:
           current_interval = (start_dt, end_dt)
+          if idx + 1 < len(intervals_all):
+            next_interval = intervals_all[idx + 1]
           break
         if start_dt > now:
           next_interval = (start_dt, end_dt)
           break
 
       if current_interval:
-        next_outage_iso = current_interval[0].isoformat()
         next_restore_iso = current_interval[1].isoformat()
         current_status = "off"
       else:
-        next_outage_iso = next_interval[0].isoformat() if next_interval else None
-        next_restore_iso = None  # only meaningful when power is off
+        next_restore_iso = None
         current_status = "on"
+
+      next_outage_iso = next_interval[0].isoformat() if next_interval else None
 
       data["next_outage"] = next_outage_iso
       data["next_restore"] = next_restore_iso

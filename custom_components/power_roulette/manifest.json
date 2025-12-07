@@ -1,0 +1,10 @@
+{
+  "domain": "power_roulette",
+  "name": "Power Roulette",
+  "version": "0.0.1",
+  "config_flow": true,
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "loggers": ["custom_components.power_roulette"]
+}

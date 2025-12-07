@@ -1,0 +1,25 @@
+{
+  "title": "Power Roulette",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Power Roulette",
+        "description": "Налаштуйте місто та чергу для розкладу відключень.",
+        "data": {
+          "city": "Місто",
+          "queue": "Черга"
+        }
+      },
+      "queue": {
+        "title": "Виберіть чергу",
+        "description": "Оберіть чергу для {city}.",
+        "data": {
+          "queue": "Черга"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Це місто та черга вже налаштовані."
+    }
+  }
+}

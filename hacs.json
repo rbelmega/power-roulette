@@ -1,0 +1,8 @@
+{
+  "name": "Power Roulette",
+  "content_in_root": false,
+  "country": ["UA"],
+  "render_readme": true,
+  "hacs_min_version": "1.0.0",
+  "homeassistant": "2024.6.0"
+}

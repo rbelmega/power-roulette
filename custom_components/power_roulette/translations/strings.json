@@ -1,0 +1,25 @@
+{
+  "title": "Power Roulette",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Power Roulette",
+        "description": "Configure your city and queue for the outage schedule.",
+        "data": {
+          "city": "City",
+          "queue": "Queue"
+        }
+      },
+      "queue": {
+        "title": "Select queue",
+        "description": "Select a queue for {city}.",
+        "data": {
+          "queue": "Queue"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This city and queue are already configured."
+    }
+  }
+}

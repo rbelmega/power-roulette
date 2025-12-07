@@ -37,7 +37,11 @@ class PowerRouletteCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     try:
       data = await self.client.async_get_schedule(self.city, self.queue)
       now = dt_util.utcnow()
-      tz = dt_util.get_time_zone(self.hass.config.time_zone)
+      tz = (
+          dt_util.get_time_zone(self.hass.config.time_zone)
+          or dt_util.get_time_zone("Europe/Kyiv")
+          or dt_util.DEFAULT_TIME_ZONE
+      )
 
       def _combine(date_val: str, time_val: str) -> datetime | None:
         """Combine date and time (local tz) into UTC-aware datetime."""
@@ -75,17 +79,25 @@ class PowerRouletteCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
       intervals_all.sort(key=lambda pair: pair[0])
 
-      next_outage_iso: str | None = None
-      next_restore_iso: str | None = None
-      current_status = "on"
+      current_interval: tuple[datetime, datetime] | None = None
+      next_interval: tuple[datetime, datetime] | None = None
 
       for start_dt, end_dt in intervals_all:
-        if now < end_dt:
-          next_outage_iso = start_dt.isoformat()
-          next_restore_iso = end_dt.isoformat()
-          if start_dt <= now:
-            current_status = "off"
+        if start_dt <= now <= end_dt:
+          current_interval = (start_dt, end_dt)
           break
+        if start_dt > now:
+          next_interval = (start_dt, end_dt)
+          break
+
+      if current_interval:
+        next_outage_iso = current_interval[0].isoformat()
+        next_restore_iso = current_interval[1].isoformat()
+        current_status = "off"
+      else:
+        next_outage_iso = next_interval[0].isoformat() if next_interval else None
+        next_restore_iso = None  # only meaningful when power is off
+        current_status = "on"
 
       data["next_outage"] = next_outage_iso
       data["next_restore"] = next_restore_iso

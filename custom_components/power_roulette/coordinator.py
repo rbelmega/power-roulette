@@ -66,6 +66,13 @@ class PowerRouletteCoordinator(DataUpdateCoordinator[dict[str, Any]]):
           end_dt = _combine(date_str, end_raw)
           if not start_dt or not end_dt:
             continue
+          # If the interval crosses midnight, push the end to the next day.
+          if end_dt <= start_dt:
+            end_dt = end_dt + timedelta(days=1)
+
+          # Persist normalized datetimes for UI cards
+          interval["start_iso"] = start_dt.isoformat()
+          interval["end_iso"] = end_dt.isoformat()
 
           if start_dt > now and (next_outage_iso is None or start_dt.isoformat() < next_outage_iso):
             next_outage_iso = start_dt.isoformat()

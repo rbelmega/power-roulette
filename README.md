@@ -64,12 +64,10 @@ After setup, the integration creates a sensor showing the next planned outage ti
         if (!Array.isArray(sched)) return [];
         const bars = [];
         sched.forEach(day => {
-          const date = day?.event_date?.split('.')?.reverse()?.join('-');
-          if (!date) return;
           (day.intervals || []).forEach((slot, idx) => {
-            if (!slot?.from || !slot?.to) return;
-            const start = new Date(`${date}T${slot.from}:00`);
-            const end = new Date(`${date}T${slot.to}:00`);
+            if (!slot?.start_iso || !slot?.end_iso) return;
+            const start = new Date(slot.start_iso);
+            const end = new Date(slot.end_iso);
             if (isNaN(start) || isNaN(end)) return;
             bars.push({ x: `${day.event_date} #${idx+1}`, y: [start.getTime(), end.getTime()] });
           });

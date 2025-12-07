@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 import logging
 from typing import Any
 
@@ -47,19 +47,23 @@ class PowerRouletteCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         date_str = day.get("event_date")
         if not date_str:
           continue
-        # date format dd.MM.yyyy
-        try:
-          day_date = dt_util.parse_datetime(date_str)
-        except Exception:  # noqa: BLE001
-          continue
+
+        def _combine(date_val: str, time_val: str) -> datetime | None:
+          """Combine date and time (local tz) into UTC-aware datetime."""
+          try:
+            local_naive = datetime.strptime(f"{date_val} {time_val}", "%d.%m.%Y %H:%M")
+          except ValueError:
+            return None
+          # Assume schedule times are in HA local timezone
+          return dt_util.as_utc(dt_util.as_local(local_naive))
 
         for interval in day.get("intervals", []):
           start_raw = interval.get("from")
           end_raw = interval.get("to")
           if not start_raw or not end_raw:
             continue
-          start_dt = dt_util.parse_datetime(f"{date_str} {start_raw}")
-          end_dt = dt_util.parse_datetime(f"{date_str} {end_raw}")
+          start_dt = _combine(date_str, start_raw)
+          end_dt = _combine(date_str, end_raw)
           if not start_dt or not end_dt:
             continue
 

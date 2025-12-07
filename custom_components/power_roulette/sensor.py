@@ -32,6 +32,7 @@ class NextOutageSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEntity
 
   _attr_has_entity_name = True
   _attr_name = "Next outage"
+  _attr_icon = "mdi:power-plug-off-outline"
   _attr_device_class = SensorDeviceClass.TIMESTAMP
 
   def __init__(self, coordinator: PowerRouletteCoordinator, entry: ConfigEntry) -> None:
@@ -71,6 +72,7 @@ class ScheduleSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEntity):
 
   _attr_has_entity_name = True
   _attr_name = "Outage schedule"
+  _attr_icon = "mdi:chart-timeline-variant"
 
   def __init__(self, coordinator: PowerRouletteCoordinator, entry: ConfigEntry) -> None:
     """Initialize the schedule sensor."""

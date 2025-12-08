@@ -22,6 +22,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
   async_add_entities(
       [
           NextOutageSensor(coordinator, entry),
+          NextOutageTextSensor(coordinator, entry),
           ScheduleSensor(coordinator, entry),
           NextRestoreSensor(coordinator, entry),
       ]
@@ -65,6 +66,50 @@ class NextOutageSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEntity
     return {
         "city": data.get("city"),
         "queue": data.get("queue"),
+        "retrieved_at": data.get("retrieved_at"),
+    }
+
+
+class NextOutageTextSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEntity):
+  """Formatted next outage time with minutes for UI display."""
+
+  _attr_has_entity_name = True
+  _attr_name = "Next outage (text)"
+  _attr_icon = "mdi:clock-time-four"
+
+  def __init__(self, coordinator: PowerRouletteCoordinator, entry: ConfigEntry) -> None:
+    """Initialize the sensor."""
+    super().__init__(coordinator)
+    self._entry = entry
+    self._attr_unique_id = f"{entry.entry_id}_next_outage_text"
+    self._attr_device_info = DeviceInfo(
+        identifiers={(DOMAIN, entry.entry_id)},
+        name="Power Roulette",
+        manufacturer="Power Roulette",
+        entry_type=None,
+    )
+
+  @property
+  def native_value(self) -> Any:
+    """Return the formatted next outage local time."""
+    data = self.coordinator.data or {}
+    outage_raw = data.get("next_outage")
+    if not outage_raw:
+      return None
+    dt_utc = dt_util.parse_datetime(outage_raw)
+    if not dt_utc:
+      return None
+    local_dt = dt_util.as_local(dt_utc)
+    return local_dt.strftime("%d.%m %H:%M")
+
+  @property
+  def extra_state_attributes(self) -> dict[str, Any]:
+    """Return additional attributes."""
+    data = self.coordinator.data or {}
+    return {
+        "city": data.get("city"),
+        "queue": data.get("queue"),
+        "next_outage": data.get("next_outage"),
         "retrieved_at": data.get("retrieved_at"),
     }
 

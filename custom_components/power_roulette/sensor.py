@@ -35,6 +35,7 @@ class NextOutageSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEntity
   _attr_name = "Next outage"
   _attr_icon = "mdi:power-plug-off-outline"
   _attr_device_class = SensorDeviceClass.TIMESTAMP
+  _attr_native_precision = 0
 
   def __init__(self, coordinator: PowerRouletteCoordinator, entry: ConfigEntry) -> None:
     """Initialize the sensor."""

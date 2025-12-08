@@ -135,4 +135,4 @@ Data refreshes automatically every 5 minutes via the remote schedule service. Th
           }
 
 ### Brand images not showing?
-Home Assistant should pick up `custom_components/power_roulette/logo.png` and `icon.png` (also mirrored under `custom_components/power_roulette/brand/`). If you still see the default puzzle piece, clear browser cache and restart HA after updating the integration.
+Home Assistant should pick up `custom_components/power_roulette/logo.png` and `icon.png` (mirrored under `custom_components/power_roulette/brand/` and `branding/`). If you still see the default puzzle piece, clear browser cache and restart HA after updating the integration.

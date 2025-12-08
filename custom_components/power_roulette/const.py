@@ -17,4 +17,6 @@ IF_CITIES: tuple[str, ...] = (
     "Яремче",
 )
 
+LVIV_CITIES: tuple[str, ...] = ()  # kept for compatibility; hidden in UI.
+
 SUPPORTED_CITIES: tuple[str, ...] = IF_CITIES

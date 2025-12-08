@@ -91,7 +91,7 @@ class NextOutageTextSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEn
 
   @property
   def native_value(self) -> Any:
-    """Return a string like 'in 4h 23m'."""
+    """Return a string like 'In 4hours 23min'."""
     data = self.coordinator.data or {}
     outage_raw = data.get("next_outage")
     if not outage_raw:
@@ -102,10 +102,10 @@ class NextOutageTextSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEn
     now = dt_util.utcnow()
     diff_seconds = (dt_utc - now).total_seconds()
     if diff_seconds < 0:
-      return "now"
+      return "Now"
     hours = int(diff_seconds // 3600)
     minutes = int((diff_seconds % 3600) // 60)
-    return f"in {hours}h {minutes}m"
+    return f"In {hours}hours {minutes}min"
 
   @property
   def extra_state_attributes(self) -> dict[str, Any]:

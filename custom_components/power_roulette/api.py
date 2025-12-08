@@ -168,8 +168,8 @@ class PowerRouletteApiClient:
     self._session = session
 
   async def async_get_cities(self) -> list[str]:
-    """Return supported cities list (static until API exposes it)."""
-    return list(SUPPORTED_CITIES)
+    """Return currently selectable cities (Ivano-Frankivsk oblast only)."""
+    return list(IF_CITIES)
 
   def _provider_for_city(self, city: str) -> Provider:
     if city in IF_CITIES:

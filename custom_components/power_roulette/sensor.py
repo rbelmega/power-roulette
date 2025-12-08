@@ -75,7 +75,7 @@ class NextOutageTextSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEn
 
   _attr_has_entity_name = True
   _attr_name = "Next outage (detailed)"
-  _attr_icon = "mdi:clock-time-four"
+  _attr_icon = "mdi:clock-alert-outline"
 
   def __init__(self, coordinator: PowerRouletteCoordinator, entry: ConfigEntry) -> None:
     """Initialize the sensor."""

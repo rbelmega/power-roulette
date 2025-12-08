@@ -26,6 +26,10 @@ After setup, the integration creates:
 
 Data refreshes automatically every 5 minutes via the remote schedule service. This skeleton uses a placeholder API client; swap in a real endpoint to power your production integration.
 
+### Regions/providers
+- Івано-Франківська область — джерело be-svitlo.oe.if.ua (працює зараз).
+- Львівська область — **beta**: розклад парситься з `https://api.loe.lviv.ua/api/menus?type=photo-grafic` (групи 1.1…6.2 з графіком у тексті). Оберіть у конфіг поточну групу (queue = код групи).
+
 ### Optional: Graph your outages (timeline)
 - The sensor `sensor.power_roulette_outage_schedule` exposes full interval data in attributes (`schedule`, `next_outage`, `next_restore`).
 - ApexCharts (stepped areas “no power” / “power” по 15 хв кроку, на перший день із розкладу):

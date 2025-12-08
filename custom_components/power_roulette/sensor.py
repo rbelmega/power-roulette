@@ -75,6 +75,7 @@ class NextRestoreSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEntit
   _attr_name = "Next power restore"
   _attr_icon = "mdi:lightning-bolt-circle"
   _attr_device_class = SensorDeviceClass.TIMESTAMP
+  _attr_native_precision = 0
 
   def __init__(self, coordinator: PowerRouletteCoordinator, entry: ConfigEntry) -> None:
     """Initialize the sensor."""

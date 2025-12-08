@@ -1,0 +1,64 @@
+blueprint:
+  name: Power Roulette — outage reminders (15/5/1 хв)
+  description: Надсилати сповіщення за 15, 5 і 1 хв до запланованого відключення згідно з Power Roulette.
+  domain: automation
+  input:
+    next_outage_entity:
+      name: Сенсор Next outage
+      selector:
+        entity:
+          domain: sensor
+    schedule_entity:
+      name: Сенсор розкладу (статус on/off)
+      default: sensor.power_roulette_outage_schedule
+      selector:
+        entity:
+          domain: sensor
+    notify_service:
+      name: Сервіс notify
+      description: Напр. notify.mobile_app_iphone
+      selector:
+        text: {}
+    minutes_before:
+      name: Хвилини до відключення
+      description: Комою розділений список хвилин для нагадувань.
+      default: "15,5,1"
+      selector:
+        text: {}
+
+trigger:
+  - platform: time_pattern
+    minutes: "/1"
+
+variables:
+  next_outage_entity: !input next_outage_entity
+  schedule_entity: !input schedule_entity
+  notify_service: !input notify_service
+  minutes_raw: !input minutes_before
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - "{{ states(next_outage_entity) not in ['unknown', 'unavailable', '', None] }}"
+          - "{{ (as_datetime(states(next_outage_entity)) - now()).total_seconds() > 0 }}"
+          - "{{ (states(schedule_entity) != 'off') if schedule_entity else true }}"
+          - >-
+            {% set minutes = minutes_raw.split(',') | map('trim') | map('int') | list %}
+            {% set diff = ((as_datetime(states(next_outage_entity)) - now()).total_seconds() / 60) | int %}
+            {{ diff in minutes }}
+        sequence:
+          - service: "{{ notify_service }}"
+            data:
+              title: "Power Roulette"
+              message: >-
+                ⚡️ Планове відключення через
+                {{ ((as_datetime(states(next_outage_entity)) - now()).total_seconds() / 60) | int }} хв.
+  - choose:
+      - conditions:
+          - "{{ states(next_outage_entity) not in ['unknown', 'unavailable', '', None] }}"
+          - "{{ (as_datetime(states(next_outage_entity)) - now()).total_seconds() < 0 }}"
+          - "{{ (as_datetime(states(next_outage_entity)) - now()).total_seconds() > -90 }}"
+        sequence: []
+mode: single

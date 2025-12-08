@@ -87,11 +87,11 @@ class NextOutageTextSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEn
         name="Power Roulette",
         manufacturer="Power Roulette",
         entry_type=None,
-    )
+  )
 
   @property
   def native_value(self) -> Any:
-    """Return a string like 'in 4hours 23min (dd.mm HH:MM)'."""
+    """Return a string like 'in 4h 23m'."""
     data = self.coordinator.data or {}
     outage_raw = data.get("next_outage")
     if not outage_raw:
@@ -99,14 +99,13 @@ class NextOutageTextSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEn
     dt_utc = dt_util.parse_datetime(outage_raw)
     if not dt_utc:
       return None
-    local_dt = dt_util.as_local(dt_utc)
     now = dt_util.utcnow()
     diff_seconds = (dt_utc - now).total_seconds()
+    if diff_seconds < 0:
+      return "now"
     hours = int(diff_seconds // 3600)
     minutes = int((diff_seconds % 3600) // 60)
-    if diff_seconds < 0:
-      return f"now ({local_dt.strftime('%d.%m %H:%M')})"
-    return f"in {hours}hours {minutes}min ({local_dt.strftime('%d.%m %H:%M')})"
+    return f"in {hours}h {minutes}m"
 
   @property
   def extra_state_attributes(self) -> dict[str, Any]:

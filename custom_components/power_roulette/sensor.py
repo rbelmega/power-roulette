@@ -71,10 +71,10 @@ class NextOutageSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEntity
 
 
 class NextOutageTextSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEntity):
-  """Formatted next outage time with minutes for UI display."""
+  """Formatted next outage time with relative countdown and local time."""
 
   _attr_has_entity_name = True
-  _attr_name = "Next outage (text)"
+  _attr_name = "Next outage (detailed)"
   _attr_icon = "mdi:clock-time-four"
 
   def __init__(self, coordinator: PowerRouletteCoordinator, entry: ConfigEntry) -> None:
@@ -91,7 +91,7 @@ class NextOutageTextSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEn
 
   @property
   def native_value(self) -> Any:
-    """Return the formatted next outage local time."""
+    """Return a string like 'in 4h 23m (dd.mm HH:MM)'."""
     data = self.coordinator.data or {}
     outage_raw = data.get("next_outage")
     if not outage_raw:
@@ -100,7 +100,13 @@ class NextOutageTextSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEn
     if not dt_utc:
       return None
     local_dt = dt_util.as_local(dt_utc)
-    return local_dt.strftime("%d.%m %H:%M")
+    now = dt_util.utcnow()
+    diff_seconds = (dt_utc - now).total_seconds()
+    hours = int(diff_seconds // 3600)
+    minutes = int((diff_seconds % 3600) // 60)
+    if diff_seconds < 0:
+      return f"now ({local_dt.strftime('%d.%m %H:%M')})"
+    return f"in {hours}h {minutes}m ({local_dt.strftime('%d.%m %H:%M')})"
 
   @property
   def extra_state_attributes(self) -> dict[str, Any]:

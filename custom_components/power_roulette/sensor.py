@@ -142,12 +142,31 @@ class NextRestoreSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEntit
 
   @property
   def native_value(self) -> Any:
-    """Return the next restore time."""
+    """Return the next restore time, clamped to a future timestamp when possible."""
     data = self.coordinator.data or {}
-    restore_raw = data.get("next_restore")
-    if restore_raw:
-      return dt_util.parse_datetime(restore_raw)
-    return None
+    now = dt_util.utcnow()
+
+    def _parse(raw: str | None):
+      return dt_util.parse_datetime(raw) if raw else None
+
+    restore_dt = _parse(data.get("next_restore"))
+    if restore_dt and restore_dt > now:
+      return restore_dt
+
+    schedule = data.get("schedule") or []
+    next_future_end = None
+    for day in schedule:
+      for interval in day.get("intervals", []):
+        end_dt = _parse(interval.get("end_iso"))
+        if not end_dt or end_dt <= now:
+          continue
+        start_dt = _parse(interval.get("start_iso"))
+        if start_dt and start_dt <= now <= end_dt:
+          return end_dt
+        if not next_future_end or end_dt < next_future_end:
+          next_future_end = end_dt
+
+    return next_future_end
 
   @property
   def extra_state_attributes(self) -> dict[str, Any]:

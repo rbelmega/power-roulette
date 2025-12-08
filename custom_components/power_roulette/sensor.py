@@ -235,10 +235,10 @@ class NextRestoreTextSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorE
 
 
 class ScheduleSensor(CoordinatorEntity[PowerRouletteCoordinator], SensorEntity):
-  """Sensor exposing the full outage schedule for charts."""
+  """Sensor exposing current power status plus full outage schedule for charts."""
 
   _attr_has_entity_name = True
-  _attr_name = "Outage schedule"
+  _attr_name = "Power status"
   _attr_icon = "mdi:chart-timeline-variant"
 
   def __init__(self, coordinator: PowerRouletteCoordinator, entry: ConfigEntry) -> None:
